@@ -1,5 +1,5 @@
 *.csv
-*.DS _Store
+.DS_Store
 *.json
 .ipynb_checkpoints
 stanford-corenlp-full-2016-10-31/

@@ -1,11 +1,10 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import nltk
 import corenlp
 from nltk import ngrams
 from text_similarity_calculator import TextSimilarityCalculator
 from feature_creator import FeatureCreator
+from create_answer_label import *
 from feature_creator_word import FeatureCreatorWord
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
@@ -30,6 +29,12 @@ def swap_bool_value_to_int(column_name, df):
     df.loc[df[column_name] == False, new_column_name] = 0
 
 
+def create_new_columns_boolean_columns(df):
+    for column in ["entity_matched", "verb_matched", "capital", "punctuation"]:
+        swap_bool_value_to_int(column, df)
+    creat_new_column_for_postage(df)
+
+
 def creat_new_column_for_postage(df):
     pos_column_name = "pos"
 
@@ -39,39 +44,21 @@ def creat_new_column_for_postage(df):
         df.loc[df[pos_column_name] != word, new_column_name] = 0
 
 
-def create_new_columns_qualitive_date(df):
-    for column in ["entity_matched", "verb_matched", "capital", "punctuation"]:
-        swap_bool_value_to_int(column, df)
+def add_dummy_columns_qualitive_features(df):
+    creat_new_column_for_entity(df, True)
+    creat_new_column_for_entity(df, False)
     creat_new_column_for_postage(df)
+    create_new_columns_boolean_columns(df)
+
+    drop_columns = ["capital", "token_entity_type",
+                    "answer_entity_type", "verb_matched", "entity_matched", "pos", "constituency_tag"]
+    df.drop(drop_columns, inplace=True, axis=1)
 
 
-def flatten(nested_list):
-    """2重のリストをフラットにする関数"""
-    return [e for inner_list in nested_list for e in inner_list]
-
-
-def create_class_label(df, original_df):
-    answered = 0
-    answers = df["answers"].iloc[0]
-
-    if ", nan" in answers:
-        answers = answers[:-6] + ']'
-    if ", nan" in answers:
-        answers = answers[:-6] + ']'
-    answers = ast.literal_eval(answers)
-
-    answer_word_list = flatten(
-        [[word for word in answer.split(' ')] for answer in answers])
-    for i in df.index:
-        if df.loc[i, "word"] in [answer.split(' ')[0] for answer in answers]:
-            original_df.loc[i, "category"] = "B"
-            answered = 1
-        elif df.loc[i, "word"] in [answer.split(' ')[-1] for answer in answers] and answered:
-            original_df.loc[i, "category"] = "E"
-        elif df.loc[i, "word"] in answer_word_list and answered:
-            original_df.loc[i, "category"] = "M"
-        else:
-            original_df.loc[i, "category"] = "O"
+def add_answer_label_input_data(original_df):
+    for question_id in set(original_df["question_id"]):
+        temp_df = original_df.loc[original_df["question_id"] == question_id]
+        create_class_label_fixed(temp_df, original_df)
 
 
 def main():
@@ -79,6 +66,8 @@ def main():
     df = df.sample(frac=0.1, replace=True)
     corenlp_dir = "stanford-corenlp-full-2016-10-31/"
     parser = corenlp.StanfordCoreNLP(corenlp_path=corenlp_dir)
+
+    # Create features for each word.
     text_similarity_calculator = TextSimilarityCalculator(
         df["context"].values + df["question"].values)
 
@@ -91,6 +80,15 @@ def main():
         df_id = creator.create_feature_vectors()
         df_feature = pd.concat([df_feature, df_id])
         index += 1
+
+    # Add Answer label for input data
+    add_answer_label_input_data(df_feature)
+
+    df_feature = pd.read_csv("01sampling_Word_0530.csv")
+
+    # Add dummy vals for categorial features.
+    add_dummy_columns_qualitive_features(df_feature)
+    print(df_feature.dtypes)
 
     df_feature.to_csv("01sampling_Word_0530.csv", index=False)
 
