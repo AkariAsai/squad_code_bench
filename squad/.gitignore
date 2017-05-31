@@ -1,0 +1,7 @@
+*.csv
+*.DS _Store
+*.json
+.ipynb_checkpoints
+stanford-corenlp-full-2016-10-31/
+__pycache__/
+nlp_paper/
