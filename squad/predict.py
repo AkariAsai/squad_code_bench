@@ -40,9 +40,9 @@ def main():
     # Split data into train/test. TODO: fix train.test split part.
     X_train, X_test = X[:50000], X[50000:]
     y_train, y_test = y[:50000], y[50000:]
-    table_train, table_test = table[:50000], table[50000:]
+    table_train, table_test = table[:40000], table[50000:]
 
-    lr = LogisticRegression(class_weight="balanced", n_jobs=-1, C=0.8)
+    lr = LogisticRegression(class_weight="balanced", n_jobs=-1, C=1)
     lr.fit(X_train, y_train)
     y_pred = lr.predict_proba(X_test)
 
@@ -59,7 +59,7 @@ def main():
                            "word", "proba", "answer", "category"])
         df_result = df_result.append(df2, ignore_index=True)
 
-    df_result.to_csv("result_0531.csv")
+    df_result.to_csv("result_0601.csv")
 
     # save final result to json/csv files.
     answers, alt_answers = create_answer_dic(y_pred, table_test)
