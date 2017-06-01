@@ -5,6 +5,7 @@ from sklearn.metrics import precision_score
 from sklearn.metrics import recall_score
 import numpy as np
 import pandas as pd
+from create_answer_json_file import *
 
 
 def create_X_y_data(df):
@@ -52,20 +53,19 @@ def main():
     df_result = pd.DataFrame()
     df_train = pd.DataFrame()
 
+    # save category prediction result to csv file.
     for word0, proba0, category0, answer0 in zip(table_test.word, y_pred, y_pred_label, table_test.answers):
         df2 = pd.DataFrame([[word0, proba0, answer0, category0]], columns=[
                            "word", "proba", "answer", "category"])
         df_result = df_result.append(df2, ignore_index=True)
 
-    df_train = pd.DataFrame()
-
-    for word1, answer1, category1 in zip(table_train.word, table_train.answers, y_train):
-        df3 = pd.DataFrame([[word1, answer1, category1]], columns=[
-                           "word", "answer", "category"])
-        df_train = df_train.append(df3, ignore_index=True)
-
     df_result.to_csv("result_0531.csv")
-    df_train.to_csv("train_0601.csv")
+
+    # save final result to json/csv files.
+    answers, alt_answers = create_answer_dic(y_pred, table_test)
+    create_question_answer_table_from_dictionary(
+        answers, alt_answers, table_test)
+    create_json_file_from_dictionary(answers)
 
 
 if __name__ == "__main__":
