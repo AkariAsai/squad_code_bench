@@ -6,9 +6,6 @@ from text_similarity_calculator import TextSimilarityCalculator
 from feature_creator import FeatureCreator
 from create_answer_label import *
 from feature_creator_word import FeatureCreatorWord
-from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
 
 
 def creat_new_column_for_entity(df, is_token=True):
@@ -83,8 +80,6 @@ def main():
 
     # Add Answer label for input data
     add_answer_label_input_data(df_feature)
-
-    df_feature = pd.read_csv("01sampling_Word_0530.csv")
 
     # Add dummy vals for categorial features.
     add_dummy_columns_qualitive_features(df_feature)

@@ -5,12 +5,13 @@ from nltk import ngrams
 from nltk import word_tokenize
 import operator
 import ast
+from nltk.corpus import stopwords
 
 
-def calculate_words_cooccurence(answer, gram):
-    total_length = len(answer.split(' '))
+def calculate_words_cooccurence(answer_tokenized, gram):
     co_occur = 0
-    for token in answer.split(' '):
+    total_length = len(gram)
+    for token in answer_tokenized:
         if token in gram:
             co_occur += 1
 
@@ -18,16 +19,22 @@ def calculate_words_cooccurence(answer, gram):
 
 
 def add_answer_label(answer, words):
-    grams = ngrams(words, len(word_tokenize(answer)))
+    stop = set(stopwords.words('english'))
+    answer_removed_stop = [
+        token for token in word_tokenize(answer) if token not in stop]
+
+    len_answer = len(answer_removed_stop)
+    grams = ngrams(words, len_answer)
     score_dic = {}
     index = 0
 
     for gram in grams:
-        score_dic[index] = calculate_words_cooccurence(answer, gram)
+        score_dic[index] = calculate_words_cooccurence(
+            answer_removed_stop, gram)
         index += 1
 
     # in case the len of words is smaller than the len of answer
-    if len(words) < len(word_tokenize(answer)):
+    if len(words) < len_answer:
         labels = ['O' for word in words]
         labels[0] = "B"
         labels[-1] = "E"
@@ -42,11 +49,11 @@ def add_answer_label(answer, words):
         if i == answer_gram_index:
             labels[i] = 'B'
             begun = True
-        elif len(word_tokenize(answer)) > 1 and i == answer_gram_index + len(word_tokenize(answer)) - 1 and begun:
+        elif len_answer > 1 and i == answer_gram_index + len(word_tokenize(answer)) - 1 and begun:
             labels[i] = 'E'
             ended = True
-        elif begun and not ended:
-            labels[i] = 'M'
+        # elif begun and not ended:
+        #     labels[i] = 'M'
 
     return labels
 
