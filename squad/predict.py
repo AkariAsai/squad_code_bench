@@ -11,6 +11,10 @@ from create_answer_json_file import *
 def create_X_y_data(df):
     columns = list(set(df) - set(['answers', 'question', 'question_id',
                                   'token', 'word', 'category', 'Unnamed: 0', 'Unnamed: 0.1']))
+
+    # for entity type difference.
+    columns = [column for column in columns if 'answer_entity_type' not in column]
+    print(columns)
     index_columns = ['answers', 'question', 'question_id', 'word']
 
     X = df[columns]
@@ -40,15 +44,37 @@ def main():
     # Split data into train/test. TODO: fix train.test split part.
     X_train, X_test = X[:50000], X[50000:]
     y_train, y_test = y[:50000], y[50000:]
-    table_train, table_test = table[:40000], table[50000:]
+    table_train, table_test = table[:50000], table[50000:]
 
     lr = LogisticRegression(class_weight="balanced", n_jobs=-1, C=1)
     lr.fit(X_train, y_train)
     y_pred = lr.predict_proba(X_test)
 
     y_pred_label = np.asarray(return_class_label(y_pred, lr))
-    print(precision_score(y_test, y_pred_label, average='macro'))
-    print(recall_score(y_test, y_pred_label, average='macro'))
+    print("Presicion : {0}".format(precision_score(
+        y_test, y_pred_label, average='macro')))
+    print("Recall : {0}".format(recall_score(
+        y_test, y_pred_label, average='macro')))
+
+    columns = list(set(df) - set(['answers', 'question', 'question_id',
+                                  'token', 'word', 'category', 'Unnamed: 0', 'Unnamed: 0.1']))
+
+    coef_dict_B, coef_dict_E, coef_dict_O = {}, {}, {}
+
+    for coef, feat in zip(lr.coef_[0], columns):
+        coef_dict_B[feat] = coef
+    print("co_eff for B")
+    print(sorted(coef_dict_B.items(), key=lambda x: x[1]))
+
+    for coef, feat in zip(lr.coef_[1], columns):
+        coef_dict_E[feat] = coef
+    print("co_eff for E")
+    print(sorted(coef_dict_E.items(), key=lambda x: x[1]))
+
+    for coef, feat in zip(lr.coef_[2], columns):
+        coef_dict_O[feat] = coef
+    print("co_eff for O")
+    print(sorted(coef_dict_O.items(), key=lambda x: x[1]))
 
     df_result = pd.DataFrame()
     df_train = pd.DataFrame()
@@ -61,10 +87,10 @@ def main():
 
     df_result.to_csv("result_0601.csv")
 
-    # save final result to json/csv files.
-    answers, alt_answers = create_answer_dic(y_pred, table_test)
+    # save final result to json / csv files.
+    answers = create_answer_dic(y_pred, table_test)
     create_question_answer_table_from_dictionary(
-        answers, alt_answers, table_test)
+        answers, table_test)
     create_json_file_from_dictionary(answers)
 
 

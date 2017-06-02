@@ -4,66 +4,64 @@ import json
 from nltk.corpus import stopwords
 import string
 from nltk import word_tokenize
+import heapq
 
 
 def create_answer_dic(y_pred, table_test):
     id_list = table_test.question_id.unique()
 
     answers = {id: [] for id in id_list}
-    alt_answers = {id: [] for id in id_list}
     begun, ended = False, False
-    alt_begun, alt_begun = False, False
 
     answer, alt_answer = "", ""
     prev_id = 0
+    table_test.loc[:, "category_B"] = [pred[0] for pred in y_pred]
+    table_test.loc[:, "category_E"] = [pred[1] for pred in y_pred]
+    table_test.loc[:, "category_O"] = [pred[2] for pred in y_pred]
 
-    for pred, word, question_id in zip(y_pred, table_test.word, table_test.question_id):
-        if pred.argmax(axis=0) == 0:
-            if len(answer) > 0:
-                answer += " "
-            answer += word
-            begun, ended = True, False
+    for question_id in id_list:
+        temp_df = table_test.loc[table_test.question_id == question_id]
+        threshold = 1 / 3
+        for index, row in temp_df.iterrows():
+            if max(temp_df.category_B) < threshold:
+                threshold = min(heapq.nlargest(3, temp_df.category_B))
+            if row.category_B >= threshold:
+                if len(answer) > 0:
+                    answer += " "
+                answer += row.word
+                begun, ended = True, False
 
-        elif (begun and pred[2] >= 0.5 and not ended) or pred.argmax(axis=0) == 1:
-            if len(answer) > 0:
-                answer += " "
-            answer += word
-            answers[question_id].append(clean_answer(answer))
-            answer = ""
-            begun, ended = False, True
+            elif (begun and row.category_O >= 0.5 and not ended) or row.category_E > threshold:
+                if row.word != ",":
+                    if len(answer) > 0:
+                        answer += " "
+                    answer += row.word
+                answers[question_id].append(clean_answer(answer))
+                answer = ""
+                begun, ended = False, True
 
-        # set threshold lower for alternative answer in case there are no
-        # "Begin the answer" label.
-        elif pred.argmax(axis=0) != 0 and pred[0] > 0.30:
-            if len(alt_answer) > 0:
-                alt_answer += " "
-            alt_answer += word
-            alt_begun, alt_ended = True, False
+            elif index == temp_df.index[-1]:
+                answers[question_id].append(clean_answer(answer))
+                answer = ""
+                begun, ended = False, True
 
-        elif (alt_begun and pred[2] >= 0.5 and not alt_ended) or pred.argmax(axis=0) == 1:
-            if len(alt_answer) > 0:
-                alt_answer += " "
-            alt_answer += word
-            alt_answers[question_id].append(clean_answer(alt_answer))
-            alt_answer = ""
-            alt_begun, alt_ended = False, True
-
-    return answers, alt_answers
+    return answers
 
 
 def clean_answer(ans_str):
-    if ans_str[-1] == ",":
-        ans_str = ans_str.replace(" ,", "")
+    if len(ans_str) > 0:
+        if ans_str[-1] == ",":
+            ans_str = ans_str.replace(" ,", "")
 
-    capitalized_stop = [word.title()
-                        for word in set(stopwords.words('english'))]
-    ans_str = " ".join([word for word in word_tokenize(
-        ans_str) if word not in capitalized_stop])
+        capitalized_stop = [word.title()
+                            for word in set(stopwords.words('english'))]
+        ans_str = " ".join([word for word in word_tokenize(
+            ans_str) if word not in capitalized_stop])
 
     return ans_str
 
 
-def create_question_answer_table_from_dictionary(answer_dic, alt_answer_dic, table):
+def create_question_answer_table_from_dictionary(answer_dic, table):
     df_answer = pd.DataFrame()
 
     for question_id in answer_dic.keys():
@@ -72,10 +70,9 @@ def create_question_answer_table_from_dictionary(answer_dic, alt_answer_dic, tab
         correct_answers = temp_df.answers
         question = temp_df.question
         predicted_answers = answer_dic[question_id]
-        alt_answers = alt_answer_dic[question_id]
 
-        df1 = pd.DataFrame([[question_id, question, correct_answers, predicted_answers, alt_answers]], columns=[
-                           "id", "question", "answers", "predicted_answers", "alternative_answers"])
+        df1 = pd.DataFrame([[question_id, question, correct_answers, predicted_answers]], columns=[
+                           "id", "question", "answers", "predicted_answers"])
         df_answer = df_answer.append(df1, ignore_index=True)
 
     df_answer.to_csv("answer_0601.csv")
