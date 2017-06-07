@@ -14,7 +14,7 @@ from ast import literal_eval
 import string
 from text_similarity_calculator import TextSimilarityCalculator
 from nltk.tokenize import word_tokenize
-
+from corenlp_extractor import CoreNLPExtractor
 
 class FeatureCreatorWord():
     def __init__(self, id, parser, text_similarity_calculator):
