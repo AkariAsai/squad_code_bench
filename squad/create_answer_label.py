@@ -58,21 +58,14 @@ def add_answer_label(answer, words):
     return labels
 
 
-def create_class_label_fixed(df, original_df):
-    answered = 0
-    answers = df["answers"].iloc[0]
-
-    if ", nan" in answers:
-        answers = answers[:-6] + ']'
-    if ", nan" in answers:
-        answers = answers[:-6] + ']'
-
-    answers = ast.literal_eval(answers)
-
+def create_class_label_fixed(df, original_df, answers):
     answer_labels = add_answer_label(answers[0], list(df.word))
 
     # Also considering the 2nd and 3rd answer.
     for i in range(len(answers) - 1):
+        print(df.word)
+        print(answers)
+        print(len(answers))
         alt_answer_labels = add_answer_label(answers[i + 1], list(df.word))
 
         for i in range(len(alt_answer_labels)):

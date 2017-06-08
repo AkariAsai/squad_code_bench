@@ -14,7 +14,7 @@ def create_X_y_data(df):
 
     # for entity type difference.
     columns = [column for column in columns if 'answer_entity_type' not in column]
-    print(columns)
+
     index_columns = ['answers', 'question', 'question_id', 'word']
 
     X = df[columns]
@@ -35,7 +35,7 @@ def return_class_label(y_pred, lr):
 
 
 def main():
-    df = pd.read_csv("01sampling_Word_0530.csv")
+    df = pd.read_csv("01sampling_Word_0607.csv")
     print(len(df.index))
     X, y, table = create_X_y_data(df)
 
@@ -63,35 +63,41 @@ def main():
 
     for coef, feat in zip(lr.coef_[0], columns):
         coef_dict_B[feat] = coef
-    print("co_eff for B")
-    print(sorted(coef_dict_B.items(), key=lambda x: x[1]))
+
+    print("coef_of_B class")
+    for k, v in sorted(coef_dict_B.items(), key=lambda x: x[1])[-10:]:
+        print("{0} : {1}".format(k, v))
 
     for coef, feat in zip(lr.coef_[1], columns):
         coef_dict_E[feat] = coef
-    print("co_eff for E")
-    print(sorted(coef_dict_E.items(), key=lambda x: x[1]))
+
+    print("coef_of_E class")
+    for k, v in sorted(coef_dict_E.items(), key=lambda x: x[1])[-10:]:
+        print("{0} : {1}".format(k, v))
 
     for coef, feat in zip(lr.coef_[2], columns):
         coef_dict_O[feat] = coef
-    print("co_eff for O")
-    print(sorted(coef_dict_O.items(), key=lambda x: x[1]))
 
-    df_result = pd.DataFrame()
-    df_train = pd.DataFrame()
+    print("coef_of_O class")
+    for k, v in sorted(coef_dict_O.items(), key=lambda x: x[1])[-10:]:
+        print("{0} : {1}".format(k, v))
+
+    # df_result = pd.DataFrame()
+    # df_train = pd.DataFrame()
 
     # save category prediction result to csv file.
-    for word0, proba0, category0, answer0 in zip(table_test.word, y_pred, y_pred_label, table_test.answers):
-        df2 = pd.DataFrame([[word0, proba0, answer0, category0]], columns=[
-                           "word", "proba", "answer", "category"])
-        df_result = df_result.append(df2, ignore_index=True)
-
-    df_result.to_csv("result_0601.csv")
+    # for word0, proba0, category0, answer0 in zip(table_test.word, y_pred, y_pred_label, table_test.answers):
+    #     df2 = pd.DataFrame([[word0, proba0, answer0, category0]], columns=[
+    #                        "word", "proba", "answer", "category"])
+    #     df_result = df_result.append(df2, ignore_index=True)
+    #
+    # df_result.to_csv("result_0601.csv")
 
     # save final result to json / csv files.
-    answers = create_answer_dic(y_pred, table_test)
-    create_question_answer_table_from_dictionary(
-        answers, table_test)
-    create_json_file_from_dictionary(answers)
+    # answers = create_answer_dic(y_pred, table_test)
+    # create_question_answer_table_from_dictionary(
+    #     answers, table_test)
+    # create_json_file_from_dictionary(answers)
 
 
 if __name__ == "__main__":
