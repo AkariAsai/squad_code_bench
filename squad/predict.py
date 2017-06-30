@@ -5,11 +5,16 @@ from sklearn.metrics import precision_score
 from sklearn.metrics import recall_score
 import numpy as np
 import pandas as pd
+from create_answer_json_file import *
 
 
 def create_X_y_data(df):
     columns = list(set(df) - set(['answers', 'question', 'question_id',
                                   'token', 'word', 'category', 'Unnamed: 0', 'Unnamed: 0.1']))
+
+    # for entity type difference.
+    columns = [column for column in columns if 'answer_entity_type' not in column]
+
     index_columns = ['answers', 'question', 'question_id', 'word']
 
     X = df[columns]
@@ -30,7 +35,7 @@ def return_class_label(y_pred, lr):
 
 
 def main():
-    df = pd.read_csv("01sampling_Word_0530.csv")
+    df = pd.read_csv("01sampling_Word_0607.csv")
     print(len(df.index))
     X, y, table = create_X_y_data(df)
 
@@ -41,31 +46,58 @@ def main():
     y_train, y_test = y[:50000], y[50000:]
     table_train, table_test = table[:50000], table[50000:]
 
-    lr = LogisticRegression(class_weight="balanced", n_jobs=-1, C=0.8)
+    lr = LogisticRegression(class_weight="balanced", n_jobs=-1, C=1)
     lr.fit(X_train, y_train)
     y_pred = lr.predict_proba(X_test)
 
     y_pred_label = np.asarray(return_class_label(y_pred, lr))
-    print(precision_score(y_test, y_pred_label, average='macro'))
-    print(recall_score(y_test, y_pred_label, average='macro'))
+    print("Presicion : {0}".format(precision_score(
+        y_test, y_pred_label, average='macro')))
+    print("Recall : {0}".format(recall_score(
+        y_test, y_pred_label, average='macro')))
 
-    df_result = pd.DataFrame()
-    df_train = pd.DataFrame()
+    columns = list(set(df) - set(['answers', 'question', 'question_id',
+                                  'token', 'word', 'category', 'Unnamed: 0', 'Unnamed: 0.1']))
 
-    for word0, proba0, category0, answer0 in zip(table_test.word, y_pred, y_pred_label, table_test.answers):
-        df2 = pd.DataFrame([[word0, proba0, answer0, category0]], columns=[
-                           "word", "proba", "answer", "category"])
-        df_result = df_result.append(df2, ignore_index=True)
+    coef_dict_B, coef_dict_E, coef_dict_O = {}, {}, {}
 
-    df_train = pd.DataFrame()
+    for coef, feat in zip(lr.coef_[0], columns):
+        coef_dict_B[feat] = coef
 
-    for word1, answer1, category1 in zip(table_train.word, table_train.answers, y_train):
-        df3 = pd.DataFrame([[word1, answer1, category1]], columns=[
-                           "word", "answer", "category"])
-        df_train = df_train.append(df3, ignore_index=True)
+    print("coef_of_B class")
+    for k, v in sorted(coef_dict_B.items(), key=lambda x: x[1])[-10:]:
+        print("{0} : {1}".format(k, v))
 
-    df_result.to_csv("result_0531.csv")
-    df_train.to_csv("train_0601.csv")
+    for coef, feat in zip(lr.coef_[1], columns):
+        coef_dict_E[feat] = coef
+
+    print("coef_of_E class")
+    for k, v in sorted(coef_dict_E.items(), key=lambda x: x[1])[-10:]:
+        print("{0} : {1}".format(k, v))
+
+    for coef, feat in zip(lr.coef_[2], columns):
+        coef_dict_O[feat] = coef
+
+    print("coef_of_O class")
+    for k, v in sorted(coef_dict_O.items(), key=lambda x: x[1])[-10:]:
+        print("{0} : {1}".format(k, v))
+
+    # df_result = pd.DataFrame()
+    # df_train = pd.DataFrame()
+
+    # save category prediction result to csv file.
+    # for word0, proba0, category0, answer0 in zip(table_test.word, y_pred, y_pred_label, table_test.answers):
+    #     df2 = pd.DataFrame([[word0, proba0, answer0, category0]], columns=[
+    #                        "word", "proba", "answer", "category"])
+    #     df_result = df_result.append(df2, ignore_index=True)
+    #
+    # df_result.to_csv("result_0601.csv")
+
+    # save final result to json / csv files.
+    # answers = create_answer_dic(y_pred, table_test)
+    # create_question_answer_table_from_dictionary(
+    #     answers, table_test)
+    # create_json_file_from_dictionary(answers)
 
 
 if __name__ == "__main__":
